@@ -47,5 +47,5 @@ Paste the puzzle's size, the puzzle, and the SHA-256 hash into player.py to play
 
 To solve puzzles at [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/) or from player.py, solve.py will take a screenshot, solve the puzzle very quickly, then can click the flags automatically.
 
-I thank \_\_\_\_ for writing the solve.py's solve_puzzle_w_matrix() function that uses SciPy magic! gen.py cannot use this solver because there is no way to modify it to reliably test if multiple solutions exist.
+I thank [Nacho-Meter-Stick](https://github.com/Nacho-Meter-Stick) for writing the solve.py's solve_puzzle_w_matrix() function that uses SciPy magic! gen.py cannot use this solver because there is no known way to modify it to reliably test if multiple solutions exist.
 

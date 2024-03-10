@@ -14,7 +14,8 @@
 # Then don't move your mouse for a few seconds while modules are imported
 #   before the screenshot is taken.
 # Another idea to implement is to, when the page is scrolled all the way to
-#   the top, refresh the browser page using the Python code.
+#   the top, refresh the browser page using the Python code, then maybe
+#   have some automated way of checking exactly when the page is refreshed.
 #   Note that the "new puzzle" button is annoying because it refreshes the
 #   page, so it resets your vertical scrolling, but you often have to scroll
 #   down just to see it.
