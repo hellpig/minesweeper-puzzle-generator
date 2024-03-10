@@ -208,12 +208,12 @@ y += coords.y
 def solve_puzzle_w_matrix(puzzle):
 
     numbers_coords = np.argwhere(puzzle != -1)
-    b = np.array([puzzle[tuple(num_coord)] for num_coord in numbers_coords])
+    b = np.array([puzzle[tuple(num_coord)] for num_coord in numbers_coords], dtype = np.int8)
 
     # use hashmap to make puzzle-to-matrix conversion O(n)
     mp = {tuple(unk): i for i, unk in enumerate(np.argwhere(puzzle == -1))}
     len_u = len(mp)
-    A = np.zeros((len(numbers_coords), len_u))
+    A = np.zeros((len(numbers_coords), len_u), dtype = np.int8)
     for i, n in enumerate(numbers_coords):
         # All 8 adjacent coords (if coord out of bounds, "(coord) in mp" will return false)
         if (n[0]-1, n[1]-1) in mp: A[i, mp[(n[0]-1, n[1]-1)]] = 1
