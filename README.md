@@ -3,7 +3,7 @@
 Generate Minesweeper puzzles with unique solutions from the easiest to the hardest possible difficulties.
 
 
-# Minesweeper generator
+# the generator
 
 The generator, gen.py, can generate the hardest possible Minesweeper puzzles such as the following...
 
@@ -22,14 +22,13 @@ Generator notes...
 * The random seed, the puzzle, and the SHA-256 hash of the solution are among the outputs.
 * The code simply removes numbers from the puzzle in a predefined shuffled order and puts any back if removing them causes the puzzle to end up with more than 1 solution. All of the resulting puzzles have 1 unique solution.
 * A 50×50 puzzle should be generated in the range from a couple minutes to a couple days. For large puzzles like this, the exponential nature of the recursive search allows for much variability in runtime! In the code, there is a commented-out breadth-first search that attempted to speed things up (it slowed things down), but it might still be useful to split my hardest difficulty levels into two different levels. An advantage of the breadth-first search is that it is closer to how a human would solve a puzzle. Though I would be very cautious in trying to differentiate between types of guessing (brute forcing) before all other non-guessing logic has been implemented.
-* The solver used by a generator that is trying to make a puzzle with one solution cannot use strategies that assume a unique solution. An example of this type of strategy is: if a 2 is surrounded by three unknowns that are connected to nothing besides the 2, those three unknowns can be cleared because, even if both of the flags were in those three locations, there is no way to uniquely determine how they should be arranged. My solver does not consider this type of logic, though perhaps it should when it tests the final puzzle for difficulty. Another interesting example is...
-```
+* The solver used by a generator that is trying to make a puzzle with one solution cannot use strategies that assume a unique solution. An example of this type of strategy is: if a 2 is surrounded by three unknowns that are connected to nothing besides the 2, those three unknowns can be cleared because, even if both of the flags were in those three locations, there is no way to uniquely determine how they should be arranged. My solver does not consider this type of logic, though perhaps it should when it tests the final puzzle for difficulty. Another interesting example is below. A dot (.) means an unknown, and the vertical line is the left edge of the board. If there is a single unique solution, the unknowns directly above the 3 and the 5 must be flags. This is a real example from a real Minesweeper puzzle.
+    ```
   |...
   |...
   |35.
   |...
-```
-A dot (.) means an unknown, and the vertical line is the left edge of the board. If there is a single unique solution. the unknowns directly above the 3 and the 5 must be flags. This is a real example from a real Minesweeper puzzle.
+    ```
 
 
 Next steps...
