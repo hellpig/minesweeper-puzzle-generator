@@ -28,7 +28,7 @@ difficulty = 2   # 0, 1, or 2
 
 
 seed = np.random.randint(0, high=10000000)  # feel free to increase high
-seed = 8117835     # you can manually set seed here
+#seed = 8117835     # you can manually set seed here
 
 rng = np.random.default_rng(seed=seed)
 # The only things that use this seed are...
