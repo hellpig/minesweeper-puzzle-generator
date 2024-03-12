@@ -12,7 +12,7 @@ from time import perf_counter
 from hashlib import sha256
 
 
-puzzSize = (20,20)
+puzzSize = (50,50)
 # If you make this too small, the target range for flag count may not be
 #   possible, and the code will try forever.
 
@@ -28,7 +28,7 @@ difficulty = 2   # 0, 1, or 2
 
 
 seed = np.random.randint(0, high=10000000)  # feel free to increase high
-#seed = 8117835     # you can manually set seed here
+seed = 8117835     # you can manually set seed here
 
 rng = np.random.default_rng(seed=seed)
 # The only things that use this seed are...
@@ -432,6 +432,7 @@ def recursive_func(remaining, flags, unknowns, connectionsPairs, connections, pr
 if True:
 
     start = perf_counter()
+
 
 
     # -1 is unknowns

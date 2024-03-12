@@ -37,15 +37,20 @@ Next steps...
 Just download the 4 files at the following link and put them in the current directory...  
 [https://github.com/Tessil/robin-map/tree/master/include/tsl](https://github.com/Tessil/robin-map/tree/master/include/tsl)  
 Though, robin_map.h isn't needed, so, if you care, 3 files are what are actually needed.
-* If you care to make many huge (or just a couple *very* huge) puzzles, there is probably a way to speed things up. Perhaps one could make a general non-brute-force solver that includes single-number and two-number logic as well as propagating to any number of numbers. I'm not convinced this will speed things up greatly, but the solver will become linearly slower in order to prevent some exponential slow down, though it could become exponentially slower because information can be propagated across the entire puzzle.
+* If you care to make many huge (or just a couple *very* huge) puzzles, there is probably a way to speed things up. Perhaps one could make a general non-brute-force solver that includes single-number and two-number logic as well as propagating to any number of numbers. I'm not convinced this will speed things up greatly, but the solver will become linearly slower in order to prevent some exponential slow down, though it could still become exponentially slower because information can be propagated across the entire puzzle.
 
 
 
 # player and solver
 
-Paste the puzzle's size, the puzzle, and the SHA-256 hash into player.py to play the puzzle! Just insert the puzzle's size, the puzzle itself, and the solution's SHA-256 hash. The player is a bit slow for huge puzzles because its matplotlib implementation redraws the entire board for each click. A JavaScript solver would be better!
+Paste the puzzle's size, the puzzle, and the SHA-256 hash into player.py to play the puzzle! The player is a bit slow for huge puzzles because its matplotlib implementation redraws the entire board for each click. A JavaScript solver would be better!
 
-To solve puzzles at [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/) or from player.py, solve.py will take a screenshot, solve the puzzle very quickly, then can click the flags automatically.
+To solve puzzles at [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/) or from player.py, solve.py will take a screenshot, solve the puzzle, then can click the flags automatically.
 
-I thank [Nacho-Meter-Stick](https://github.com/Nacho-Meter-Stick) for writing the solve.py's solve_puzzle_w_matrix() function that uses SciPy magic! gen.py cannot use this solver because there is no known way to modify it to reliably test if multiple solutions exist.
+
+# thanks
+
+I thank [Nacho-Meter-Stick](https://github.com/Nacho-Meter-Stick) for writing a solver that uses the very fast function [https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html)! We even figured out some ways of getting this solver to tell us if there are multiple solutions by calling the function again with either an extra constraint or a function to be minimized. However, for a couple percent of some 50×50 puzzles I was testing, the SciPy solver would either incorrectly give no solutions or incorrectly give a solution where there were -1 flags at a certain location. The documentation for this function say that it "typically finds" the solution, so these results aren't very surprising. The SciPy function cannot be trusted, so it no longer appears in this GitHub repository.
+
+Nacho-Meter-Stick also optimized a couple lines of my code and inspired me to try the depth=1 breadth-first search.
 
