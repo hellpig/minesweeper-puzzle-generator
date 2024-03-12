@@ -54,3 +54,5 @@ I thank [Nacho-Meter-Stick](https://github.com/Nacho-Meter-Stick) for writing a 
 
 Nacho-Meter-Stick also optimized a couple lines of my code and inspired me to try the depth=1 breadth-first search.
 
+I also thank [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/) for their great puzzles!
+
