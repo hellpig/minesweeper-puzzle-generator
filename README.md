@@ -32,7 +32,7 @@ Generator notes...
 
 
 Next steps...
-* To speed up the code (perhaps by a huge amount), convert gen.py to C++! I would then convert the arrays to 1D so that we no longer need to store coordinates as tuples (if the row and column are known, 1D arrays can be accessed via \[row\*width + column\]). Since C++'s default sets are slow, I would include robin_set.h to get good sets...  
+* To speed up the code (perhaps by a huge amount), convert gen.py to C++! I would strongly consider converting the arrays to 1D so that we no longer need to store coordinates as tuples (if the row and column are known, 1D arrays can be accessed via \[row\*width + column\], and, if the index is known, row is index/width, and column is index%width). Since C++'s default sets are slow, I would include robin_set.h to get good sets...  
 [https://github.com/Tessil/robin-map](https://github.com/Tessil/robin-map)  
 Just download the 4 files at the following link and put them in the current directory...  
 [https://github.com/Tessil/robin-map/tree/master/include/tsl](https://github.com/Tessil/robin-map/tree/master/include/tsl)  
@@ -50,7 +50,7 @@ To solve puzzles at [https://www.puzzle-minesweeper.com/](https://www.puzzle-min
 
 # thanks
 
-I thank [Nacho-Meter-Stick](https://github.com/Nacho-Meter-Stick) for writing a solver that uses the very fast function [https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html)! We even figured out some ways of getting this solver to tell us if there are multiple solutions by calling the function again with either an extra constraint or a function to be minimized (using the array 2 * solutionArray - 1, where solutionArray is made of 1's and 0's). However, for a couple percent of some 50×50 puzzles I was testing (including those with 1 unique solution), the SciPy solver would either incorrectly give no solutions or incorrectly give a solution where there were -1 flags at a certain location. The documentation for this function say that it "typically finds" the solution, so these results aren't very surprising. The SciPy function cannot be trusted, so it no longer appears in this GitHub repository.
+I thank [Nacho-Meter-Stick](https://github.com/Nacho-Meter-Stick) for writing a solver that uses the very fast function [https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.milp.html)! We even figured out some ways of getting this solver to tell us if there are multiple solutions by calling the function again with either an extra constraint or a function to be minimized (using an array equal to 2 * solutionArray - 1, where solutionArray is made of 1's and 0's to denote flags). However, for a couple percent of some 50×50 puzzles I was testing (including those with 1 unique solution), the SciPy solver would incorrectly give a solution where there were -1 flags at a certain location. If there were multiple solutions, the SciPy solver sometimes wouldn't find them. The documentation for this function say that it "typically finds" the solution, so these results aren't extremely surprising. The SciPy function cannot be trusted, so it no longer appears in this GitHub repository.
 
 Nacho-Meter-Stick also optimized a couple lines of my code and inspired me to try the depth=1 breadth-first search.
 
