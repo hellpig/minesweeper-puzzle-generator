@@ -38,6 +38,7 @@ Just download the 4 files at the following link and put them in the current dire
 [https://github.com/Tessil/robin-map/tree/master/include/tsl](https://github.com/Tessil/robin-map/tree/master/include/tsl)  
 Though, robin_map.h isn't needed, so, if you care, 3 files are what are actually needed.
 * If you care to make many huge (or just a couple *very* huge) puzzles, there is probably a way to speed things up. Perhaps one could make a general non-brute-force solver that includes single-number and two-number logic as well as propagating to any number of numbers. I'm not convinced this will speed things up greatly, especially since Minesweeper is NP-complete. The solver will become linearly slower in order to prevent some exponential slow down, though it could still become exponentially slower because information can be propagated across the entire puzzle.
+* To get the truly hardest puzzles as fast as possible, already hard puzzles should be modified until even harder. Instead of just (1) replacing numbers with unknowns until numbers cannot be replaced anymore (what my code currently does), the code could then (2) replace one or more numbers with unknowns (giving the puzzle multiple solutions), then (3) randomly replace unknowns with numbers until a single solution exists (possibly giving a new solution), then (4) replace numbers with unknowns again, then (5) if the puzzle is more difficult, keep it (else revert). Steps 2-5 can be done on repeat.
 
 
 
