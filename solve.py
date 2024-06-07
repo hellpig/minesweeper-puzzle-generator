@@ -44,11 +44,11 @@
 #   so nothing can be near the dock! The dock can be moved!
 
 # Each OS has different fonts for the numbers!!
-# This can affect the color too because color is distorted near edges
+# This can affect the color too because color is distorted near edges.
+# The interestingPixel variable stores the pixel that can distinguish between
+#   all digits, but this may change as the OS changes! 
 
-# I also have some commented out parameters for making this solve my
-#   player.html or player.py !
-# Sadly, on my Ubuntu 22.04, player.py's puzzle is not displayed at the correct size.
+# I also have some commented out parameters for making this solve my player.html!
 
 
 
@@ -64,7 +64,7 @@ puzzSize = (20,20)    # rows, columns
 doClicks = True
 
 
-#outerBorderThickness = 1   # for player.html or player.py
+#outerBorderThickness = 1   # for player.html
 outerBorderThickness = 3
 
 pixelWidth = 31  # per number
@@ -86,7 +86,7 @@ colors = { (153, 153, 153): 0,
            (125, 180, 174): 6,    # not "central" color
            (0, 0, 0):   7,
            (153, 0, 153): 8,
-           (238, 238, 238): -1,    # for player.html or player.py
+           (238, 238, 238): -1,    # for player.html
            (204, 204, 204): -1 }
 
 
@@ -101,12 +101,12 @@ colors = { (153, 153, 153): 0,
            (54, 153, 153): 6,
            (0, 0, 0): 7,
            (153, 0, 153): 8,
-           (238, 238, 238): -1,    # for player.html or player.py
+           (238, 238, 238): -1,    # for player.html
            (204, 204, 204): -1 }
 
 
 # macOS
-interestingPixel = (15,5)        # for player.py
+#interestingPixel = (14,5)        # for player.html
 interestingPixel = (15,8)
 colors = { (153, 153, 153): 0,   # greys are the same
            (0, 60, 249): 1,
@@ -117,13 +117,12 @@ colors = { (153, 153, 153): 0,   # greys are the same
            (0, 154, 153): 6,
            (0, 0, 0): 7,            # greys are the same
            (158, 24, 149): 8,
-           (238, 238, 238): -1,    # for player.html or player.py; greys are the same
+           (238, 238, 238): -1,    # for player.html; greys are the same
            (204, 204, 204): -1 }    # greys are the same
 
 
 # Windows
-interestingPixel = (15,5)     # for player.py
-interestingPixel = (15,7)     # for player.html
+#interestingPixel = (15,7)     # for player.html
 interestingPixel = (15,8)
 colors = { (153, 153, 153): 0,
            (0, 0, 255): 1,
@@ -134,7 +133,7 @@ colors = { (153, 153, 153): 0,
            (0,153,153): 6,
            (0, 0, 0):   7,
            (153,0,153): 8,
-           (238, 238, 238): -1,    # for player.html or player.py
+           (238, 238, 238): -1,    # for player.html
            (204, 204, 204): -1 }  # grey around a number (or in any box)
 
 

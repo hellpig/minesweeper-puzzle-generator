@@ -46,9 +46,7 @@ Though, robin_map.h isn't needed, so, if you care, 3 files are what are actually
 
 Paste the puzzle's size, the puzzle, and the SHA-256 hash into player.html to play the puzzle in your web browser!
 
-I also have provided player.py, which does not require a browser, but requires matplotlib. This player is a bit slow for huge puzzles because its matplotlib implementation redraws the entire board for each click. I only include it because web browsers may stop supporting my SHA-256 implementation or whatever.
-
-To solve puzzles at [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/) or from player.html or player.py, solve.py will take a screenshot, solve the puzzle, then can click the flags automatically. It uses basically the same solver as gen.py.
+To solve puzzles at [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/) or from player.html, solve.py will take a screenshot, solve the puzzle, then can click the flags automatically. It uses basically the same solver as gen.py.
 
 
 # thanks
