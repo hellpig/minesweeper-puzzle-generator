@@ -85,14 +85,14 @@ body {
     cursor: pointer;
     user-select: none;
  
-    /* Default color for unrevealed tiles */
+    /* Default color for uncleared tiles */
     background-color: #eee;
  
     /* Default text color (for flags) */
     color: #ffa500;
 }
 
-.revealed { background-color: #ccc; }
+.cleared { background-color: #ccc; }
 
 /* colors of numbers */
 .c0 { color: #999999; }
@@ -134,16 +134,26 @@ if ( numRows * numCols != puzzle.length ) {
 
 const gameBoard = document.getElementById("gameBoard");
 
-// initialize board[row][col], the state variable
+/*
+  Initialize board[][], the main state variable
+    0: clue
+    1: unknown
+    2: user-cleared
+    3: flag
+
+  If numCols or numRows is too large given puzzle string,
+     board[i][j] = 0 when puzzle[] is undefined,
+     then cell.textContent becomes undefined, which makes it "", which is safe.
+*/   
 let board = [];
 for (let i = 0; i < numRows; i++) {
     board[i] = [];
     for (let j = 0; j < numCols; j++) {
-        board[i][j] = {
-            isInitial: (puzzle[j + numCols*i] != "9"),   // initial puzzle
-            isCleared: false,   // user-cleared locations
-            isFlag: false
-        };
+        if ( puzzle[j + numCols*i] == "9" ) {
+            board[i][j] = 1;   // unknown
+        } else {
+            board[i][j] = 0;   // clue
+        }
     }
 }
 
@@ -162,7 +172,7 @@ function check_solution() {
     let sol_str = "";
     for (let i = 0; i < numRows; i++) {
         for (let j = 0; j < numCols; j++) {
-            if ( board[i][j].isFlag ) {
+            if ( board[i][j] == 3 ) {
                 sol_str += "1";
             } else {
                 sol_str += "0";
@@ -179,61 +189,102 @@ function check_solution() {
             }
         }
     );
-    
+
+}
+
+// if there is the correct number of flags around it, clear around a clue
+function clear_clue(row, col) {
+
+    let flag_count = 0;
+    for (let i = Math.max(0,row-1); i <= Math.min(numRows-1,row+1); i++) {
+        for (let j = Math.max(0,col-1); j <= Math.min(numCols-1,col+1); j++) {
+            if ( board[i][j] == 3 ) {
+                flag_count++;
+            }
+        }
+    }
+
+    if ( puzzle[col + numCols*row] == flag_count ) {
+        // clear all surrounding non-cleared cells
+        for (let i = Math.max(0,row-1); i <= Math.min(numRows-1,row+1); i++) {
+            for (let j = Math.max(0,col-1); j <= Math.min(numCols-1,col+1); j++) {
+                if ( board[i][j] == 1 ) {
+                    board[i][j] = 2;
+                    document.getElementById("r"+i+"c"+j).classList.add("cleared");
+                }
+            }
+        }
+    }
+
 }
 
 function click(row, col) {
 
-    if ( !playing || board[row][col].isFlag ) {
+    if ( !playing || board[row][col] == 3 ) {  // flag
+
         return;
-    }
 
-    if (board[row][col].isInitial) {
+    } else if (board[row][col] == 0 ) {   // clue
 
-        let flag_count = 0;
-        for (let i = Math.max(0,row-1); i <= Math.min(numRows-1,row+1); i++) {
-            for (let j = Math.max(0,col-1); j <= Math.min(numCols-1,col+1); j++) {
-                if ( board[i][j].isFlag ) {
-                    flag_count++;
-                }
-            }
-        }
+        clear_clue(row, col);
 
-        if ( puzzle[col + numCols*row] == flag_count ) {
-            // clear all surrounding non-cleared cells
-            for (let i = Math.max(0,row-1); i <= Math.min(numRows-1,row+1); i++) {
-                for (let j = Math.max(0,col-1); j <= Math.min(numCols-1,col+1); j++) {
-                    if ( !board[i][j].isInitial && !board[i][j].isCleared ) {
-                        click(i,j);
-                    }
-                }
-            }
-        }
+    } else if ( board[row][col] == 2 ) {  // cleared
 
-    } else {
-        if ( board[row][col].isCleared ) {
-            board[row][col].isCleared = false;
-            document.getElementById("r"+row+"c"+col).className = "cell";
-        } else {
-            board[row][col].isCleared = true;
-            document.getElementById("r"+row+"c"+col).classList.add("revealed");
-        }
+        board[row][col] = 1;
+        document.getElementById("r"+row+"c"+col).className = "cell";
+
+    } else {                             // unknown
+
+        board[row][col] = 2;
+        document.getElementById("r"+row+"c"+col).classList.add("cleared");
+
     }
 
 }
 
+// on a touch screen, this is touch-and-hold instead of right click
 function click_right(e, row, col) {
     e.preventDefault();   // stop the context menu
 
-    if ( !playing || board[row][col].isCleared || board[row][col].isInitial ) {
+    if ( !playing || board[row][col] == 2 || board[row][col] == 0 ) {   // clue or cleared
+
+        return;
+
+    } else if ( board[row][col] == 3 ) {   // flag
+
+        board[row][col] = 1;
+        document.getElementById("r"+row+"c"+col).textContent = "";
+
+    } else {                              // unknown
+
+        board[row][col] = 3;
+        document.getElementById("r"+row+"c"+col).textContent = "⚑";
+        check_solution();
+
+    }
+}
+
+// The following is an unused function to cycle flag, cleared, unknown.
+// This way, right click is not needed.
+function click_cycle(row, col) {
+    if ( !playing ) {
         return;
     }
 
-    if ( board[row][col].isFlag ) {
-        board[row][col].isFlag = false;
+    if (board[row][col] == 0) {           // clue
+        clear_clue(row, col);
+    } else if ( board[row][col] == 3 ) {   // flag
+        // make cleared instead
+        board[row][col] = 2;
         document.getElementById("r"+row+"c"+col).textContent = "";
-    } else {
-        board[row][col].isFlag = true;
+        document.getElementById("r"+row+"c"+col).classList.add("cleared");
+    } else if ( board[row][col] == 2 ) {   // cleared
+        // make unknown instead
+        board[row][col] = 1;
+        document.getElementById("r"+row+"c"+col).className = "cell";
+    } else {                              // unknown
+        // make a flag
+        board[row][col] = 3;
         document.getElementById("r"+row+"c"+col).textContent = "⚑";
         check_solution();
     }
@@ -246,13 +297,14 @@ for (let i = 0; i < numRows; i++) {
         const cell = document.createElement("div");
         cell.className = "cell";
         cell.setAttribute("id", "r"+i+"c"+j);
-        if (board[i][j].isInitial) {
+        if ( board[i][j] == 0 ) {   // clue
             const count = puzzle[j + numCols*i]
             cell.classList.add( "c" + count );
             cell.textContent = count;
         }
-        cell.addEventListener("contextmenu", (e) => click_right(e,i,j) );
+        //cell.addEventListener( "click", () => click_cycle(i, j) );
         cell.addEventListener( "click", () => click(i, j) );
+        cell.addEventListener( "contextmenu", (e) => click_right(e,i,j) );
         gameBoard.appendChild(cell);
 
     }
