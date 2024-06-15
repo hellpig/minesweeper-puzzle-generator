@@ -17,10 +17,8 @@ To align with https://www.puzzle-minesweeper.com/,
 When solved, background color will turn yellow, a message is displayed,
   and no further clicks are allowed.
 Solution hash is checked whenever a flag is placed.
-I currently just have the user enter the SHA-256 hashed solution,
-  but I could have instead put in a solver that solves the puzzle
-  so that the solution isn't required. Or, the code could just check
-  if all clues have the correct number of flags.
+A currently unused array and function instead checks if all clues have
+  the correct number of flags, preventing the need to supply a solution hash.
 
 I made most colors and dimensions match
   https://www.puzzle-minesweeper.com/
@@ -29,6 +27,7 @@ except for background-color, which I kept to make the board look nice
 
 Just insert your puzzle in the first <script> block just below!
 Left click reveals or undoes a reveal, and right click places or removes flags.
+There is a currently-unused function that lets you not need right click.
 -->
 
 
@@ -170,16 +169,14 @@ for (let i = 0; i < numRows; i++) {
     }
 }
 
-// https://stackoverflow.com/a/67600346
-const getSHA256Hash = async (input) => {
-  const textAsBuffer = new TextEncoder().encode(input);
-  const hashBuffer = await window.crypto.subtle.digest("SHA-256", textAsBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray
-    .map((item) => item.toString(16).padStart(2, "0"))
-    .join("");
-};
+// how to end game when a solution is found
+function solution_found() {
+    playing = false;
+    document.getElementById("bod").style.background = "#ffff00 none";
+    alert("☺ solved! ☺");
+}
 
+// checks against a solution hash
 function check_solution() {
 
     let sol_str = "";
@@ -193,20 +190,27 @@ function check_solution() {
         }
     }
 
+    // https://stackoverflow.com/a/67600346
+    const getSHA256Hash = async (input) => {
+      const textAsBuffer = new TextEncoder().encode(input);
+      const hashBuffer = await window.crypto.subtle.digest("SHA-256", textAsBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray
+        .map((item) => item.toString(16).padStart(2, "0"))
+        .join("");
+    };
+
     getSHA256Hash(sol_str).then(
         (hash) => {
             if (hash == solution) {
-                playing = false;
-                document.getElementById("bod").style.background = "#ffff00 none";
-                alert("☺ solved! ☺");
+                solution_found();
             }
         }
     );
 
 }
 
-// if there is the correct number of flags around it, clear around a clue
-function clear_clue(row, col) {
+function count_flags_around_clue(row, col) {
 
     let flag_count = 0;
     for (let i = Math.max(0,row-1); i <= Math.min(numRows-1,row+1); i++) {
@@ -216,8 +220,36 @@ function clear_clue(row, col) {
             }
         }
     }
+    return flag_count;
 
-    if ( puzzle[col + numCols*row] == flag_count ) {
+}
+
+
+/* unused array and function as an alternate way of checking the solution */
+let clues = [];
+for (let i = 0; i < numRows; i++) {
+    for (let j = 0; j < numCols; j++) {
+        const num = puzzle[j + numCols*i];
+        if ( num != "9" ) {
+            clues.push([i, j, Number(num)]);
+        }
+    }
+}
+// if numRows or numCols is too large given puzzle string, clues[] simply contains NaN values
+function check_solution_no_hash() {
+    for (let i = 0; i < clues.length; i++) {
+        if ( count_flags_around_clue(clues[i][0], clues[i][1]) != clues[i][2] ) {
+            return;
+        }
+    }
+    solution_found();
+}
+
+
+// if there is the correct number of flags around it, clear around a clue
+function clear_clue(row, col) {
+
+    if ( puzzle[col + numCols*row] == count_flags_around_clue(row, col) ) {
         // clear all surrounding non-cleared cells
         for (let i = Math.max(0,row-1); i <= Math.min(numRows-1,row+1); i++) {
             for (let j = Math.max(0,col-1); j <= Math.min(numCols-1,col+1); j++) {
@@ -273,11 +305,12 @@ function click_right(e, row, col) {
         board[row][col] = flag;
         document.getElementById("r"+row+"c"+col).textContent = "⚑";
         check_solution();
+        //check_solution_no_hash();
 
     }
 }
 
-// The following is an unused function to cycle flag, cleared, unknown.
+// The following is an alternate unused function to cycle flag, cleared, unknown.
 // This way, right click is not needed.
 function click_cycle(row, col) {
     if ( !playing ) {
@@ -297,6 +330,7 @@ function click_cycle(row, col) {
         board[row][col] = flag;
         document.getElementById("r"+row+"c"+col).textContent = "⚑";
         check_solution();
+        //check_solution_no_hash();
     }
 }
 
