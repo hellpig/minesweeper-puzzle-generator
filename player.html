@@ -18,7 +18,9 @@ When solved, background color will turn yellow, a message is displayed,
   and no further clicks are allowed.
 Solution hash is checked whenever a flag is placed.
 A currently unused array and function instead checks if all clues have
-  the correct number of flags, preventing the need to supply a solution hash.
+  the correct number of flags, preventing the need to supply a solution hash,
+  but calculating the hash might still be useful if then sending the hash,
+  puzzle seed, etc. to a webserver.
 
 I made most colors and dimensions match
   https://www.puzzle-minesweeper.com/
@@ -27,7 +29,7 @@ except for background-color, which I kept to make the board look nice
 
 Just insert your puzzle in the first <script> block just below!
 Left click reveals or undoes a reveal, and right click places or removes flags.
-There is a currently-unused function that lets you not need right click.
+There is a currently-unused click function that lets you not need right click.
 -->
 
 
@@ -144,7 +146,7 @@ const gameBoard = document.getElementById("gameBoard");
 
 /*
   Using the following words is more readable than using the integer literals.
-  The actual integer values are arbitrary as long as they are unique.
+  The actual integer values are arbitrary as long as they are unique and Uint8.
 */
 const clue    = 1;
 const unknown = 2;
@@ -152,20 +154,19 @@ const cleared = 3;
 const flag    = 4;
 
 /*
-  Initialize board[][], the main state variable.
+  Initialize board[col + numCols*row], the main state variable.
   If numCols or numRows is too large given puzzle string,
-     board[i][j] = clue when puzzle[] is undefined,
-     then cell.textContent becomes undefined, which makes it "", which is safe.
-*/   
-let board = [];
-for (let i = 0; i < numRows; i++) {
-    board[i] = [];
-    for (let j = 0; j < numCols; j++) {
-        if ( puzzle[j + numCols*i] == "9" ) {
-            board[i][j] = unknown;
-        } else {
-            board[i][j] = clue;
-        }
+     board[i] = clue when puzzle[i] is undefined.
+*/
+const size = numCols * numRows;
+let clueCount = 0;
+const board = new Uint32Array(size);    // Uint8Array would work too
+for (let i = 0; i < size; i++) {
+    if ( puzzle[i] == "9" ) {
+        board[i] = unknown;
+    } else {
+        board[i] = clue;
+        clueCount++;
     }
 }
 
@@ -180,13 +181,11 @@ function solution_found() {
 function check_solution() {
 
     let sol_str = "";
-    for (let i = 0; i < numRows; i++) {
-        for (let j = 0; j < numCols; j++) {
-            if ( board[i][j] == flag ) {
-                sol_str += "1";
-            } else {
-                sol_str += "0";
-            }
+    for (let i = 0; i < size; i++) {
+        if ( board[i] == flag ) {
+            sol_str += "1";
+        } else {
+            sol_str += "0";
         }
     }
 
@@ -215,7 +214,7 @@ function count_flags_around_clue(row, col) {
     let flag_count = 0;
     for (let i = Math.max(0,row-1); i <= Math.min(numRows-1,row+1); i++) {
         for (let j = Math.max(0,col-1); j <= Math.min(numCols-1,col+1); j++) {
-            if ( board[i][j] == flag ) {
+            if ( board[j + numCols*i] == flag ) {
                 flag_count++;
             }
         }
@@ -225,20 +224,24 @@ function count_flags_around_clue(row, col) {
 }
 
 
-/* unused array and function as an alternate way of checking the solution */
-let clues = [];
+/* unused array, clues[], and unused function as an alternate way of checking the solution */
+const cluesSize = clueCount * 3;  // for each clue: row, col, and count are stored
+const clues = new Uint32Array(cluesSize);
+let ind = 0;
 for (let i = 0; i < numRows; i++) {
     for (let j = 0; j < numCols; j++) {
         const num = puzzle[j + numCols*i];
         if ( num != "9" ) {
-            clues.push([i, j, Number(num)]);
+            clues[ind] = i;
+            clues[ind+1] = j;
+            clues[ind+2] = Number(num);  // becomes 0 when Number(undefined)=NaN
+            ind += 3;
         }
     }
 }
-// if numRows or numCols is too large given puzzle string, clues[] simply contains NaN values
 function check_solution_no_hash() {
-    for (let i = 0; i < clues.length; i++) {
-        if ( count_flags_around_clue(clues[i][0], clues[i][1]) != clues[i][2] ) {
+    for (let i = 0; i < cluesSize; i += 3) {
+        if ( count_flags_around_clue(clues[i], clues[i+1]) != clues[i+2] ) {
             return;
         }
     }
@@ -247,15 +250,16 @@ function check_solution_no_hash() {
 
 
 // if there is the correct number of flags around it, clear around a clue
-function clear_clue(row, col) {
+function clear_clue(row, col, ind) {
 
-    if ( puzzle[col + numCols*row] == count_flags_around_clue(row, col) ) {
+    if ( Number(puzzle[ind]) == count_flags_around_clue(row, col) ) {
         // clear all surrounding non-cleared cells
         for (let i = Math.max(0,row-1); i <= Math.min(numRows-1,row+1); i++) {
             for (let j = Math.max(0,col-1); j <= Math.min(numCols-1,col+1); j++) {
-                if ( board[i][j] == unknown ) {
-                    board[i][j] = cleared;
-                    document.getElementById("r"+i+"c"+j).classList.add("cleared");
+                const indNew = j + numCols*i;
+                if ( board[indNew] == unknown ) {
+                    board[indNew] = cleared;
+                    document.getElementById("i"+indNew).classList.add("cleared");
                 }
             }
         }
@@ -263,72 +267,77 @@ function clear_clue(row, col) {
 
 }
 
-function click(row, col) {
+function click(row, col, ind) {
 
-    if ( !playing || board[row][col] == flag ) {
+    if ( !playing || board[ind] == flag ) {
 
         return;
 
-    } else if ( board[row][col] == clue ) {
+    } else if ( board[ind] == clue ) {
 
-        clear_clue(row, col);
+        clear_clue(row, col, ind);
 
-    } else if ( board[row][col] == cleared ) {
+    } else if ( board[ind] == cleared ) {
 
-        board[row][col] = unknown;
-        document.getElementById("r"+row+"c"+col).className = "cell";
+        board[ind] = unknown;
+        document.getElementById("i"+ind).className = "cell";
 
     } else {      // unknown
 
-        board[row][col] = cleared;
-        document.getElementById("r"+row+"c"+col).classList.add("cleared");
+        board[ind] = cleared;
+        document.getElementById("i"+ind).classList.add("cleared");
 
     }
 
 }
 
 // on a touch screen, this is touch-and-hold instead of a right click
-function click_right(e, row, col) {
+function click_right(e, ind) {
     e.preventDefault();   // stop the context menu
 
-    if ( !playing || board[row][col] == clue || board[row][col] == cleared ) {
+    if ( !playing || board[ind] == clue || board[ind] == cleared ) {
 
         return;
 
-    } else if ( board[row][col] == flag ) {
+    } else if ( board[ind] == flag ) {
 
-        board[row][col] = unknown;
-        document.getElementById("r"+row+"c"+col).textContent = "";
+        board[ind] = unknown;
+        document.getElementById("i"+ind).textContent = "";
 
     } else {    // unknown
 
-        board[row][col] = flag;
-        document.getElementById("r"+row+"c"+col).textContent = "⚑";
-        check_solution();
-        //check_solution_no_hash();
+        board[ind] = flag;
+        document.getElementById("i"+ind).textContent = "⚑";
 
     }
+
+    // check solution when either adding or removing a flag
+    check_solution();
+    //check_solution_no_hash();
+
 }
 
 // The following is an alternate unused function to cycle flag, cleared, unknown.
 // This way, right click is not needed.
-function click_cycle(row, col) {
+function click_cycle(row, col, ind) {
     if ( !playing ) {
         return;
     }
 
-    if ( board[row][col] == clue ) {
-        clear_clue(row, col);
-    } else if ( board[row][col] == flag ) {
-        board[row][col] = cleared;
-        document.getElementById("r"+row+"c"+col).textContent = "";
-        document.getElementById("r"+row+"c"+col).classList.add("cleared");
-    } else if ( board[row][col] == cleared ) {
-        board[row][col] = unknown;
-        document.getElementById("r"+row+"c"+col).className = "cell";
+    if ( board[ind] == clue ) {
+        clear_clue(row, col, ind);
+    } else if ( board[ind] == flag ) {
+        board[ind] = cleared;
+        document.getElementById("i"+ind).textContent = "";
+        document.getElementById("i"+ind).classList.add("cleared");
+        check_solution();
+        //check_solution_no_hash();
+    } else if ( board[ind] == cleared ) {
+        board[ind] = unknown;
+        document.getElementById("i"+ind).className = "cell";
     } else {       // unknown
-        board[row][col] = flag;
-        document.getElementById("r"+row+"c"+col).textContent = "⚑";
+        board[ind] = flag;
+        document.getElementById("i"+ind).textContent = "⚑";
         check_solution();
         //check_solution_no_hash();
     }
@@ -337,18 +346,23 @@ function click_cycle(row, col) {
 // render initial board and set event listeners
 for (let i = 0; i < numRows; i++) {
     for (let j = 0; j < numCols; j++) {
+        const ind = j + numCols*i;
 
         const cell = document.createElement("div");
         cell.className = "cell";
-        cell.setAttribute("id", "r"+i+"c"+j);
-        if ( board[i][j] == clue ) {
-            const count = puzzle[j + numCols*i]
+        cell.setAttribute("id", "i"+ind);
+        if ( board[ind] == clue ) {
+            const count = puzzle[ind];
+            if (typeof count == 'undefined') {  // continue just to be safe
+                gameBoard.appendChild(cell);
+                continue;
+            }
             cell.classList.add( "c" + count );
             cell.textContent = count;
         }
-        //cell.addEventListener( "click", () => click_cycle(i, j) );
-        cell.addEventListener( "click", () => click(i, j) );
-        cell.addEventListener( "contextmenu", (e) => click_right(e,i,j) );
+        //cell.addEventListener( "click", () => click_cycle(i, j, ind) );
+        cell.addEventListener( "click", () => click(i, j, ind) );
+        cell.addEventListener( "contextmenu", (e) => click_right(e,ind) );
         gameBoard.appendChild(cell);
 
     }
