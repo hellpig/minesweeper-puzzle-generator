@@ -3,13 +3,16 @@
 # Generate minesweeper puzzles and solution SHA-256 hash similar to those at
 #   https://www.puzzle-minesweeper.com/
 # Feel free to change the distribution of number of flags
-#   in the code.
+#   in the code via when isFlag is set.
 
 
 import numpy as np
 from itertools import combinations
 from time import perf_counter
 from hashlib import sha256
+
+# CP-SAT solver; can only be used if difficulty is 2
+from ortools.sat.python import cp_model    # pip install ortools
 
 
 puzzSize = (50,50)
@@ -27,8 +30,30 @@ difficulty = 2   # 0, 1, or 2
 
 
 
+branchLimitBeforeCpSat = 200
+# Only used when difficulty == 2.
+# -1 means pure CP-SAT.
+#  0 means use the old non-recursive solver first, then CP-SAT if guessing is needed.
+#  N means allow N old recursive branches before falling back to CP-SAT.
+#  A huge number, such as 10**10, gives essentially the old behavior.
+#
+# If the old solver hits the branch limit, CP-SAT starts fresh from puzzle[].
+# It does not reuse partial work from the old solver; the old attempt is only
+# a cheap first try that may solve easy cases before CP-SAT is called.
+
+useCpSatAfterFirstFallback = True
+# If True, then after one successfully removed clue needs CP-SAT, later candidates
+# start with CP-SAT. If False, the old solver still gets a first try each time.
+# This can help when branchLimitBeforeCpSat is high enough that hitting the limit
+# means the old solver probably wasted real time.
+# If branchLimitBeforeCpSat is too low, this can hurt by skipping cheap old-solver
+# rejections of candidates with multiple solutions.
+
+
+
 seed = np.random.randint(0, high=10000000)  # feel free to increase high
 #seed = 8117835     # you can manually set seed here
+seed = 3915595
 
 rng = np.random.default_rng(seed=seed)
 # The only things that use this seed are...
@@ -44,6 +69,74 @@ np.set_printoptions(threshold=np.inf)
 
 # make a lookup table that is nCr(n,r)
 nCr = np.array([[1,0,0,0,0,0,0,0,0,],[1,1,0,0,0,0,0,0,0,],[1,2,1,0,0,0,0,0,0,],[1,3,3,1,0,0,0,0,0,],[1,4,6,4,1,0,0,0,0,],[1,5,10,10,5,1,0,0,0,],[1,6,15,20,15,6,1,0,0,],[1,7,21,35,35,21,7,1,0,],[1,8,28,56,70,56,28,8,1]], dtype = np.uint32)
+
+
+
+
+######## solve with CP-SAT
+
+def count_solutions_cpsat(puzzle):
+
+  model = cp_model.CpModel()
+
+  # Make one Boolean variable for each unknown square.
+  # 1 means flag, 0 means clear.
+  vars = {}
+  for i in range(puzzSize[0]):
+    for j in range(puzzSize[1]):
+      if puzzle[i,j] == -1:
+        vars[i,j] = model.NewBoolVar("x_" + str(i) + "_" + str(j))
+
+  # Add one constraint for each visible clue.
+  for i in range(puzzSize[0]):
+    for j in range(puzzSize[1]):
+
+      if puzzle[i,j] == -1:
+        continue
+
+      unknowns = []
+      for i2 in range(max(0,i-1), min(puzzSize[0],i+2)):
+        for j2 in range(max(0,j-1), min(puzzSize[1],j+2)):
+          if puzzle[i2,j2] == -1:
+            unknowns.append(vars[i2,j2])
+
+      if unknowns:
+        model.Add(sum(unknowns) == int(puzzle[i,j]))
+      elif int(puzzle[i,j]) != 0:
+        return 0
+
+  solver = cp_model.CpSolver()
+  status = solver.Solve(model)
+
+  if status != cp_model.OPTIMAL and status != cp_model.FEASIBLE:
+    return 0
+
+  if not vars:
+    return 1
+
+  # Store the first solution.
+  solution = {}
+  for key in vars:
+    solution[key] = solver.Value(vars[key])
+
+  # Add a constraint saying the next solution must differ somewhere.
+  difference = []
+  for key in vars:
+    if solution[key]:
+      difference.append(1 - vars[key])
+    else:
+      difference.append(vars[key])
+
+  model.Add(sum(difference) >= 1)
+
+  status = solver.Solve(model)
+
+  if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+    return 2
+
+  return 1
+
+
 
 
 
@@ -157,8 +250,12 @@ def solve(remaining, flags, unknowns, connectionsPairs, connections):
 # For each in remaining, try a flag or a clear. If there is a contradiction, the other must be correct.
 #
 # I do not use this. It slows down the solver.
-# If I ever did use it, I would be sure to add the depth parameters so that they still print when difficulty=2,
-#   where depth would be the depth of the RECURSIVE solver.
+# Also, this function is experimental and not maintained. It rebinds local
+#   variables such as remaining and unknowns, so it should not be turned on
+#   without first being checked carefully.
+# If I ever did use it, I would be sure to add the depth parameters so that
+#   they still print when difficulty=2, where depth would be the depth of the
+#   RECURSIVE solver.
 
 
 # Returns -1 if there is proven to be 0 solutions.
@@ -321,8 +418,15 @@ def breadth_first_search(remaining, flags, unknowns, connectionsPairs, connectio
 finalBranches = 0  # value does not matter yet, but we must define the global variable
 # This variable is useful for analyzing a difficulty=2 puzzle that is known to have 1 unique solution.
 
-def recursive_func(remaining, flags, unknowns, connectionsPairs, connections, printDepth=False, depth=0):
-  global solCount, finalBranches
+# created to be a better branch count for when to switch to CP-SAT
+branchCount = 0
+
+# hitBranchLimit is created so we know why recursive_func returns.
+# branchCount >= branchLimitBeforeCpSat might be true and also not why the function returned
+hitBranchLimit = False 
+
+def recursive_func(remaining, flags, unknowns, connectionsPairs, connections, printDepth=False, depth=0, useBranchLimit=True):
+  global solCount, finalBranches, branchCount, hitBranchLimit
 
   # solve whatever we can solve without guessing. This greatly speeds things up!
   if solve(remaining, flags, unknowns, connectionsPairs, connections) == -1:
@@ -338,6 +442,11 @@ def recursive_func(remaining, flags, unknowns, connectionsPairs, connections, pr
 
   if difficulty < 2:
     return
+
+  if useBranchLimit and branchLimitBeforeCpSat >= 0:
+    if branchCount >= branchLimitBeforeCpSat:
+      hitBranchLimit = True
+      return
 
 
   # this does not speed things up, though could possibly be used to define another difficulty level
@@ -356,8 +465,26 @@ def recursive_func(remaining, flags, unknowns, connectionsPairs, connections, pr
   '''
 
 
-  r3 = sorted(remaining, key=lambda x: nCr[len(unknowns[x]), flags[x]], reverse=True)   # this sorting by number of combinations GREATLY improves the speed!
+  r3 = sorted(remaining, key=lambda x: nCr[len(unknowns[x]), flags[x]], reverse=True)   # this sorting that has us use fewest combinations first GREATLY improves the speed!
   current = r3.pop()
+  '''
+  # instead, of above code, do the same but smarter without actually sorting (just search for best)
+
+  bestInd = 0
+  bestComb = nCr[len(unknowns[remaining[0]]), flags[remaining[0]]]
+
+  for i in range(1, len(remaining)):
+    c = remaining[i]
+    comb = nCr[len(unknowns[c]), flags[c]]
+    if comb <= bestComb:
+      bestComb = comb
+      bestInd = i
+
+  current = remaining[bestInd]
+
+  r3 = remaining.copy()
+  r3.pop(bestInd)
+  '''
 
   if not nCr[len(unknowns[current]), flags[current]]:
     print("this happens!")
@@ -370,6 +497,13 @@ def recursive_func(remaining, flags, unknowns, connectionsPairs, connections, pr
 
     if solCount>1:    # stop counting after 2
       break
+
+    # count branches
+    if useBranchLimit and branchLimitBeforeCpSat >= 0:
+      if branchCount >= branchLimitBeforeCpSat:
+        hitBranchLimit = True
+        break
+      branchCount += 1
 
     # shallow copy (greatly speeds things up compared to deep copy!)
     u2 = unknowns.copy()
@@ -419,8 +553,35 @@ def recursive_func(remaining, flags, unknowns, connectionsPairs, connections, pr
       finalBranches += 1
       continue
 
-    recursive_func(r2, f2, u2, c2, connections, printDepth, depth+1)
+    recursive_func(r2, f2, u2, c2, connections, printDepth, depth+1, useBranchLimit)
 
+
+
+######## wrapper created in order to have a hybrid (recursive_func and CP-SAT) approach
+# This is not needed if difficulty < 2
+# This function is only called on one line of code
+
+cpSatFallbackActive = False
+
+def count_solutions_hybrid(puzzle, remaining, flags, unknowns, connectionsPairs, connections):
+
+  global solCount, branchCount, hitBranchLimit, cpSatFallbackActive
+
+  if difficulty == 2 and (branchLimitBeforeCpSat < 0 or cpSatFallbackActive):
+    return count_solutions_cpsat(puzzle)  # run the CP-SAT solver instead
+
+  solCount = 0
+  branchCount = 0
+  hitBranchLimit = False
+
+  recursive_func(remaining, flags, unknowns, connectionsPairs, connections)
+
+  if difficulty == 2 and hitBranchLimit:
+    if useCpSatAfterFirstFallback and branchLimitBeforeCpSat > 0:
+      cpSatFallbackActive = True
+    return count_solutions_cpsat(puzzle)   # run the CP-SAT solver if recursive_func hit its branch limit
+
+  return solCount
 
 
 
@@ -619,8 +780,11 @@ if True:
 
         ## do it!
 
-        solCount = 0
-        recursive_func(remaining, flags, unknowns, connectionsPairs, connections)
+        temp = cpSatFallbackActive  # to revert if desired
+
+        solCount = count_solutions_hybrid(puzzle, remaining, flags, unknowns, connectionsPairs, connections)
+
+
 
 
         '''
@@ -636,6 +800,7 @@ if True:
         ## update things
 
         if solCount != 1:
+          cpSatFallbackActive = temp   # revert
           puzzle[k] = num   #put back number
         else:
 
@@ -747,7 +912,7 @@ if True:
           difficulty = 2
           solCount = 0
           finalBranches = 0
-          recursive_func(remaining0, flags0, unknowns0, connectionsPairs0, connections0, True, 0)
+          recursive_func(remaining0, flags0, unknowns0, connectionsPairs0, connections0, True, 0, False)
           print("finalBranches =", finalBranches)
 
           #exit()  # when I'm looking for the first difficulty=2 of a small puzzSize

@@ -7,6 +7,8 @@
 # For the non-beginner ones, you only have to look at 1 number at
 #   a time and look at all pairs.
 
+# This code assumes there is one unique solution.
+
 # Use 100% zoom in browser and OS.
 # Else, the parts of the board jitter as browser window size is changed.
 # When starting the code,
@@ -302,6 +304,7 @@ print("time =", perf_counter() - start, "s")
 
 
 # returns -1 if there is proven to be 0 solutions
+#   and mutates all inputs in place
 def solve(remaining, flags, unknowns, sol, connectionsPairs):
 
   change = True
@@ -403,7 +406,7 @@ def solve(remaining, flags, unknowns, sol, connectionsPairs):
 
 ######## do the recursion!
 # Note that https://www.puzzle-minesweeper.com/ will never
-#   require guessing or recursion.
+#   require guessing or recursion (in 2024)
 
 
 
@@ -428,7 +431,7 @@ def recursive_func(remaining, flags, unknowns, sol, connectionsPairs):
     exit()   # don't look for multiple solutions
 
 
-  r3 = sorted(remaining, key=lambda x: nCr[len(unknowns[x]), flags[x]], reverse=True)   # this sorting by number of combinations GREATLY improves the speed!
+  r3 = sorted(remaining, key=lambda x: nCr[len(unknowns[x]), flags[x]], reverse=True)   # this sorting that has us use fewest combinations first GREATLY improves the speed!
   current = r3.pop()
 
   # Note that combinations( ,0) puts i=() through the loop.
