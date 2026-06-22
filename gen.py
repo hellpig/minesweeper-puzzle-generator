@@ -53,7 +53,7 @@ useCpSatAfterFirstFallback = True
 
 seed = np.random.randint(0, high=10000000)  # feel free to increase high
 #seed = 8117835     # you can manually set seed here
-seed = 3915595
+#seed = 3915595
 
 rng = np.random.default_rng(seed=seed)
 # The only things that use this seed are...
