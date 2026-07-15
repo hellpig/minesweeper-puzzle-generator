@@ -13,14 +13,15 @@ What I call Minesweeper *puzzles* have all clue numbers exposed before any click
 
 Unlike the best quality puzzles I've seen so far, found at [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/), my code attempts to generate the hardest possible puzzles. This website's easy puzzles can be solved with purely one-number-at-a-time logic, and the rest of their puzzles can be solved with the addition of two-numbers-at-a-time logic (based on my 2024 tests). Unlike them, on top of a solver that knows this logic, I have a fast recursive (brute-force) algorithm that makes smart guesses before trying the less smart ones and a SAT solver, allowing me to try to generate the hardest possible puzzles with the lowest runtime.
 
-gen_sat.cpp is the recommended generator with a hybrid SAT fallback. gen.py is kept as a readable Python reference version with a hybrid CP-SAT fallback. For gen_sat.cpp, just enter the puzzle size, the desired difficulty, and an optional random seed.
+gen_sat.cpp is the recommended generator with a hybrid SAT fallback. Just enter the puzzle size, the desired difficulty, and an optional random seed. If you want puzzles optimized by evolution for difficulty, run gen_sat_evolve.cpp instead.
 
 Before 2026, I had a simple Python version, and no C++ version. In 2026, ChatGPT helped me!
 * gen.cpp was written by ChatGPT based on the simple Python version! It is almost 10 times faster in my tests.
-* gen.py now has a hybrid solver that can eventually use Google's OR-Tools CP-SAT solver for hardest puzzles. CP-SAT can be 1000s of times faster for some very large and hard puzzles. When gen.py switches to CP-SAT, any progress already made by the old solver is discarded instead of being encoded into the CP-SAT model. This code was validated by making a version (not included) that runs both solvers and compares their solution counts (and prints solution times).
+* gen.py now has a hybrid solver that can eventually use Google's OR-Tools CP-SAT solver for hardest puzzles. gen.py is kept as a readable Python reference version with a hybrid CP-SAT fallback. CP-SAT can be 1000s of times faster for some very large and hard puzzles. When gen.py switches to CP-SAT, any progress already made by the old solver is discarded instead of being encoded into the CP-SAT model. This code was validated by making a version (not included) that runs both solvers and compares their solution counts (and prints solution times).
 * gen_sat.cpp was written by ChatGPT to have a hybrid SAT fallback. The SAT solver itself is incremental. Its clauses and learned information are retained between candidate puzzles, which made repeated checks very fast in my tests. This code was validated by making a version (not included) that runs both solvers and compares their solution counts (and prints solution times).
+* gen_sat_evolve.cpp was inspired by how [https://github.com/t-dillon/tdoku](https://github.com/t-dillon/tdoku) evolves Sudoku puzzles when generating them. I asked ChatGPT to implement this evolutionary approach to make the puzzles as difficult as possible according to a chosen metric. I haven't tested this code deeply, tried all parameter combinations, or optimized parameter combinations, but it certainly creates difficult puzzles! In my tests (code not included), evolving by the SAT metric also substantially increased the depth required by my recursive solver, though the two rankings are not identical.
 
-In the directory containing gen_sat.cpp, run the following once...
+In the directory containing gen_sat.cpp or gen_sat_evolve.cpp, run the following once...
   ```
 git clone https://github.com/arminbiere/cadical.git
 cd cadical
@@ -28,11 +29,12 @@ git checkout rel-3.0.0    # optional; this is the version I used
 ./configure && make
 cd ..
   ```
-Then, to compile and run gen_sat.cpp, do...
+This even works with Cygwin64. Then, to compile and run gen_sat.cpp, do...
   ```
 g++ -std=c++17 -O3 gen_sat.cpp -Icadical/src cadical/build/libcadical.a -o gen_sat
 ./gen_sat
   ```
+For gen_sat_evolve.cpp, do the same thing but change *gen_sat* to *gen_sat_evolve* everywhere.
 
 Generator notes...
 * The difficulty can be selected between [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/)'s easy, their hard, and even harder. My solver can solve any solvable puzzle, so you might end up creating the world's hardest puzzle! The actual difficulty is displayed if the target difficulty was not reached. The above tiny puzzle is harder than the website's hard.
@@ -51,9 +53,7 @@ Generator notes...
     ```
 
 
-Next steps...
-* To get the truly hardest puzzles as fast as possible, already hard puzzles should be modified until even harder. Instead of just (1) replacing numbers with unknowns until numbers cannot be replaced anymore (what my code currently does), the code could then (2) replace one or more numbers with unknowns (giving the puzzle multiple solutions), then (3) randomly replace unknowns with numbers until a single solution exists (possibly giving a new solution), then (4) replace numbers with unknowns again keeping one solution, then (5) if the puzzle is more difficult (probably primarily based on number of guesses required), keep it (else revert), or add it to a pool of best versions. Steps 2-5 can be done on repeat. This procedure would not make the very small puzzle sizes much harder because, for them to be considered hard by my generator, they must require guessing, and, since the puzzle is a small size, the tricky part that requires guessing must be most of the puzzle. This might be a game changer!
-* If you care to make many huge (or just a couple of *very* huge) puzzles, there is probably a way to speed things up. Perhaps one could make a general non-brute-force solver that includes single-number and two-number logic as well as propagating to any number of numbers. I'm not convinced this will speed things up greatly, especially since Minesweeper is NP-complete. The solver will hopefully become linearly slower in order to prevent some exponential slowdown, though it could still become exponentially slower because information can be propagated across the entire puzzle. I probably will never pursue this because, when solving a Sudoku, it is eventually more practical to make a guess or two instead of trying ever harder strategies.
+If you care to make many huge (or just a couple of *very* huge) puzzles, there is probably a way to speed things up. Perhaps one could make a general non-brute-force solver that includes single-number and two-number logic as well as propagating to any number of numbers, though capped in practice. I'm not convinced this will speed things up greatly, especially since Minesweeper is NP-complete. The solver will hopefully become a couple times slower in order to prevent some exponential slowdown, though it could still become exponentially slower because information can be propagated across the entire puzzle. I probably will never pursue this because, when solving a Sudoku, it is eventually more practical to make a guess or two instead of trying ever harder strategies. However, I would pursue it if I learned that human solvers should do it, because this solver could then give better difficulty estimates of the puzzles that are created.
 
 
 
@@ -70,3 +70,4 @@ I thank [Nacho-Meter-Stick](https://github.com/Nacho-Meter-Stick) for optimizing
 
 I also thank [https://www.puzzle-minesweeper.com/](https://www.puzzle-minesweeper.com/) for their great puzzles!
 
+I thank [https://github.com/t-dillon/tdoku](https://github.com/t-dillon/tdoku) for the beautiful code that inspired me.
